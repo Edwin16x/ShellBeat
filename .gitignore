@@ -1,0 +1,11 @@
+__pycache__/ 
+*.py[cod]
+.venv/
+venv/
+.DS_Store
+musica/*
+!musica/.gitkeep
+
+*.db
+descargadas.txt
+biblioteca.json

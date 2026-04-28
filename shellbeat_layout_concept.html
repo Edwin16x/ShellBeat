@@ -1,0 +1,181 @@
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+.wrap { font-family: var(--font-mono); padding: 1rem 0; }
+.terminal { background: #111; border-radius: 10px; overflow: hidden; border: 0.5px solid #333; }
+.titlebar { background: #1a1a1a; padding: 8px 12px; display: flex; align-items: center; gap: 8px; border-bottom: 0.5px solid #2a2a2a; }
+.t-circle { width: 10px; height: 10px; border-radius: 50%; }
+.t-red { background: #E24B4A; }
+.t-yellow { background: #EF9F27; }
+.t-green { background: #1D9E75; }
+.t-title { flex: 1; text-align: center; font-size: 11px; color: #555; }
+
+.layout { display: grid; grid-template-columns: 1fr 1.1fr 1.4fr; grid-template-rows: 1fr auto; height: 380px; }
+
+.panel { border-right: 0.5px solid #2a2a2a; overflow: hidden; display: flex; flex-direction: column; }
+.panel:last-child { border-right: none; }
+.panel-header { padding: 6px 12px; font-size: 10px; color: #444; background: #151515; border-bottom: 0.5px solid #222; letter-spacing: 0.08em; display: flex; justify-content: space-between; align-items: center; }
+.panel-body { flex: 1; overflow: hidden; padding: 8px; }
+
+.statusbar { grid-column: 1 / -1; background: #0d0d0d; border-top: 0.5px solid #2a2a2a; padding: 5px 12px; display: flex; align-items: center; gap: 16px; font-size: 10px; color: #444; }
+.sb-item { display: flex; align-items: center; gap: 5px; }
+.sb-key { background: #222; color: #666; padding: 1px 5px; border-radius: 3px; font-size: 9px; border: 0.5px solid #333; }
+.sb-sep { color: #2a2a2a; }
+
+.song-item { padding: 5px 6px; border-radius: 4px; font-size: 11px; display: flex; flex-direction: column; gap: 1px; cursor: pointer; margin-bottom: 2px; }
+.song-item.active { background: #1e1545; }
+.song-title { color: #ccc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.song-title.active-t { color: #9b8fff; }
+.song-artist { color: #444; font-size: 10px; }
+.playing-dot { width: 5px; height: 5px; border-radius: 50%; background: #7F77DD; display: inline-block; margin-right: 5px; animation: pulse 1.2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+.cover-wrap { display: flex; flex-direction: column; align-items: center; padding: 6px 0; }
+.cover { width: 110px; height: 110px; border-radius: 6px; background: linear-gradient(135deg, #2a1a4a, #1a2a4a); display: flex; align-items: center; justify-content: center; font-size: 40px; margin-bottom: 10px; }
+.track-title { color: #e0e0e0; font-size: 13px; font-weight: 500; text-align: center; }
+.track-artist { color: #666; font-size: 11px; text-align: center; margin-top: 3px; }
+.track-meta { color: #444; font-size: 10px; text-align: center; margin-top: 3px; }
+
+.progress-wrap { padding: 6px 4px; }
+.progress-bar { height: 3px; background: #222; border-radius: 2px; }
+.progress-fill { height: 100%; width: 38%; background: #7F77DD; border-radius: 2px; }
+.time-row { display: flex; justify-content: space-between; font-size: 10px; color: #444; margin-top: 4px; }
+
+.controls { display: flex; justify-content: center; align-items: center; gap: 14px; padding: 4px 0; }
+.c-btn { color: #555; font-size: 14px; }
+.c-play { color: #7F77DD; font-size: 18px; }
+
+.vol-row { display: flex; align-items: center; gap: 8px; padding: 4px 4px; }
+.vol-bar { flex: 1; height: 2px; background: #222; border-radius: 2px; }
+.vol-fill { height: 100%; width: 70%; background: #444; border-radius: 2px; }
+.vol-label { font-size: 10px; color: #444; }
+
+.lyric-line { padding: 4px 4px; font-size: 11px; border-radius: 3px; }
+.lyr-past { color: #333; }
+.lyr-active { color: #c9c0ff; background: #1e1545; font-size: 12px; padding: 5px 6px; }
+.lyr-next { color: #666; }
+
+.badge { font-size: 9px; padding: 1px 6px; border-radius: 3px; }
+.badge-purple { background: #2a1a4a; color: #7F77DD; }
+.badge-green { background: #0a2a1a; color: #1D9E75; }
+</style>
+
+<h2 class="sr-only">Concepto de layout para ShellBeat — reproductor en terminal con tres paneles</h2>
+
+<div class="wrap">
+  <div class="terminal">
+    <div class="titlebar">
+      <div class="t-circle t-red"></div>
+      <div class="t-circle t-yellow"></div>
+      <div class="t-circle t-green"></div>
+      <span class="t-title">shellbeat</span>
+    </div>
+
+    <div class="layout">
+
+      <div class="panel">
+        <div class="panel-header">
+          <span>biblioteca</span>
+          <span class="badge badge-purple">142 pistas</span>
+        </div>
+        <div class="panel-body">
+          <div class="song-item active">
+            <div class="song-title active-t"><span class="playing-dot"></span>El Mal Querer</div>
+            <div class="song-artist">Rosalía</div>
+          </div>
+          <div class="song-item">
+            <div class="song-title">Malamente</div>
+            <div class="song-artist">Rosalía</div>
+          </div>
+          <div class="song-item">
+            <div class="song-title">Bagdad</div>
+            <div class="song-artist">Rosalía</div>
+          </div>
+          <div class="song-item">
+            <div class="song-title">Con Altura</div>
+            <div class="song-artist">Rosalía, J Balvin</div>
+          </div>
+          <div class="song-item">
+            <div class="song-title">Aute Cuture</div>
+            <div class="song-artist">Rosalía</div>
+          </div>
+          <div class="song-item">
+            <div class="song-title">Juro Que</div>
+            <div class="song-artist">Rosalía</div>
+          </div>
+          <div class="song-item">
+            <div class="song-title">De Aquí No Sales</div>
+            <div class="song-artist">Rosalía</div>
+          </div>
+          <div class="song-item">
+            <div class="song-title">Milionària</div>
+            <div class="song-artist">Rosalía</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <span>ahora suena</span>
+          <span class="badge badge-green">opus 320k</span>
+        </div>
+        <div class="panel-body">
+          <div class="cover-wrap">
+            <div class="cover">◈</div>
+            <div class="track-title">El Mal Querer</div>
+            <div class="track-artist">Rosalía</div>
+            <div class="track-meta">El Mal Querer • 2018</div>
+          </div>
+          <div class="progress-wrap">
+            <div class="progress-bar"><div class="progress-fill"></div></div>
+            <div class="time-row"><span>1:38</span><span>4:19</span></div>
+          </div>
+          <div class="controls">
+            <span class="c-btn">⏮</span>
+            <span class="c-btn">⏪</span>
+            <span class="c-play">⏸</span>
+            <span class="c-btn">⏩</span>
+            <span class="c-btn">⏭</span>
+          </div>
+          <div class="vol-row">
+            <span class="vol-label">vol</span>
+            <div class="vol-bar"><div class="vol-fill"></div></div>
+            <span class="vol-label">70%</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <span>letra</span>
+          <span class="badge badge-purple">sincronizada</span>
+        </div>
+        <div class="panel-body" style="display:flex; flex-direction:column; justify-content:center;">
+          <div class="lyric-line lyr-past">Yo me quedo en la orilla</div>
+          <div class="lyric-line lyr-past">esperando que me llames</div>
+          <div class="lyric-line lyr-past">si tú quisieras volver</div>
+          <div class="lyric-line lyr-active">▶ yo lo daría todo</div>
+          <div class="lyric-line lyr-next">por tenerte aquí otra vez</div>
+          <div class="lyric-line lyr-next">en mis brazos otra vez</div>
+          <div class="lyric-line lyr-next" style="color:#2a2a2a;">no quiero estar sin ti</div>
+          <div class="lyric-line lyr-next" style="color:#2a2a2a;">no quiero estar sin ti</div>
+        </div>
+      </div>
+
+      <div class="statusbar">
+        <div class="sb-item"><span class="sb-key">space</span><span>play/pause</span></div>
+        <span class="sb-sep">│</span>
+        <div class="sb-item"><span class="sb-key">←</span><span class="sb-key">→</span><span>seek</span></div>
+        <span class="sb-sep">│</span>
+        <div class="sb-item"><span class="sb-key">↑</span><span class="sb-key">↓</span><span>volumen</span></div>
+        <span class="sb-sep">│</span>
+        <div class="sb-item"><span class="sb-key">n</span><span>siguiente</span></div>
+        <span class="sb-sep">│</span>
+        <div class="sb-item"><span class="sb-key">s</span><span>shuffle</span></div>
+        <span class="sb-sep">│</span>
+        <div class="sb-item"><span class="sb-key">q</span><span>salir</span></div>
+      </div>
+
+    </div>
+  </div>
+</div>
