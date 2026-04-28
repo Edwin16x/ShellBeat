@@ -99,6 +99,7 @@ Screen { layout: vertical; background: #111111; }
     background: #1a1a1a; border: solid #333333;
     padding: 1 2; margin: 4 8;
     align: center middle;
+    overflow-y: auto;
 }
 .modal-dialog Label { margin-bottom: 1; }
 .modal-title {

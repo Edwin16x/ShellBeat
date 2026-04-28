@@ -8,7 +8,7 @@ class MusicPlayer:
     """Motor de reproducción basado en mpv."""
 
     def __init__(self) -> None:
-        self.player: Any = mpv.MPV(video=False, ytdl=False)
+        self.player: Any = mpv.MPV(video=False, ytdl=False, keep_open=True, idle=True)
         self._playlist: list[str] = []
         self._current_index: int = 0
         self._shuffle: bool = False

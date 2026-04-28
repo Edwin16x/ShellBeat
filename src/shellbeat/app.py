@@ -367,7 +367,8 @@ class ShellBeat(App):
     # ── Modales ───────────────────────────────────────────────────────────────
 
     def action_open_theme(self) -> None:
-        def on_result(color: str) -> None:
+        def on_result(color: Optional[str]) -> None:
+            if not color: return
             self._accent = color
             self.db.set("accent_color", color)
             self._apply_accent()
@@ -384,7 +385,8 @@ class ShellBeat(App):
         self.push_screen(HistoryScreen(history))
 
     def action_create_playlist(self) -> None:
-        def on_name(name: str) -> None:
+        def on_name(name: Optional[str]) -> None:
+            if not name: return
             pl_id = self.db.create_playlist(name)
             for path in self._tracks:
                 self.db.add_to_playlist(pl_id, path)
@@ -393,7 +395,8 @@ class ShellBeat(App):
 
     def action_select_playlist(self) -> None:
         pls = self.db.get_playlists()
-        def on_pick(pl_id: int) -> None:
+        def on_pick(pl_id: Optional[int]) -> None:
+            if pl_id is None: return
             if pl_id == -1:
                 tracks = list(self._all_tracks)
             else:
@@ -586,12 +589,6 @@ class ShellBeat(App):
                 f"  {_fmt(pos)}  ─────  {_fmt(dur)}"
             )
             self._sync_lyrics(pos)
-
-            # Fallback: detectar fin de pista por posición
-            # (por si eof-reached de mpv no dispara el evento)
-            if pos >= dur - 0.5 and dur > 5:
-                self._advance()
-                return
 
         vol = self.player.volume
         filled = round(vol / 100 * 16)
