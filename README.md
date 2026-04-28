@@ -1,6 +1,3 @@
-# ShellBeat
-a
-
 # 🎵 ShellBeat
 
 > Reproductor de música TUI (Terminal User Interface) construido con Python, Textual y mpv.
