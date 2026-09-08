@@ -177,42 +177,91 @@ func ParseLRCString(content string) ([]LyricLine, error) {
 	return lyrics, nil
 }
 
-type LRCLibResponse struct {
+type LRCLibItem struct {
 	SyncedLyrics string `json:"syncedLyrics"`
 }
 
-// DownloadLyricsLRCLIB fetches synced lyrics from LRCLIB API and saves to disk.
+// DownloadLyricsLRCLIB fetches synced lyrics from LRCLIB API with multi-stage search fallbacks.
 func (m *MetadataExtractor) DownloadLyricsLRCLIB(audioPath, title, artist string) ([]LyricLine, error) {
 	lrcPath := m.GetLRCPath(audioPath)
+	cleanTitle := FormatCleanTitle(filepath.Base(audioPath))
+	if cleanTitle == "" {
+		cleanTitle = title
+	}
 
-	apiURL := fmt.Sprintf("https://lrclib.net/api/get?track_name=%s&artist_name=%s",
-		url.QueryEscape(title), url.QueryEscape(artist))
+	client := &http.Client{Timeout: 6 * time.Second}
+	var syncedLyrics string
 
-	client := &http.Client{Timeout: 5 * time.Second}
-	resp, err := client.Get(apiURL)
+	// Strategy 1: Direct /api/get if artist is known
+	if artist != "" && artist != "Artista Desconocido" {
+		getURL := fmt.Sprintf("https://lrclib.net/api/get?track_name=%s&artist_name=%s",
+			url.QueryEscape(title), url.QueryEscape(artist))
+		if resp, err := client.Get(getURL); err == nil {
+			if resp.StatusCode == http.StatusOK {
+				body, _ := io.ReadAll(resp.Body)
+				var res LRCLibItem
+				if err := json.Unmarshal(body, &res); err == nil && res.SyncedLyrics != "" {
+					syncedLyrics = res.SyncedLyrics
+				}
+			}
+			_ = resp.Body.Close()
+		}
+	}
+
+	// Strategy 2: /api/search?q=cleanTitle + artist
+	if syncedLyrics == "" && artist != "" && artist != "Artista Desconocido" {
+		searchURL := fmt.Sprintf("https://lrclib.net/api/search?q=%s",
+			url.QueryEscape(cleanTitle+" "+artist))
+		syncedLyrics = fetchFromSearch(client, searchURL)
+	}
+
+	// Strategy 3: /api/search?q=cleanTitle
+	if syncedLyrics == "" && cleanTitle != "" {
+		searchURL := fmt.Sprintf("https://lrclib.net/api/search?q=%s",
+			url.QueryEscape(cleanTitle))
+		syncedLyrics = fetchFromSearch(client, searchURL)
+	}
+
+	// Strategy 4: /api/search?q=title
+	if syncedLyrics == "" && title != "" && title != cleanTitle {
+		searchURL := fmt.Sprintf("https://lrclib.net/api/search?q=%s",
+			url.QueryEscape(title))
+		syncedLyrics = fetchFromSearch(client, searchURL)
+	}
+
+	if syncedLyrics == "" {
+		return nil, fmt.Errorf("no synced lyrics found for %s", cleanTitle)
+	}
+
+	_ = os.WriteFile(lrcPath, []byte(syncedLyrics), 0644)
+	return ParseLRCString(syncedLyrics)
+}
+
+func fetchFromSearch(client *http.Client, searchURL string) string {
+	resp, err := client.Get(searchURL)
 	if err != nil {
-		return nil, err
+		return ""
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("lrclib returned status %d", resp.StatusCode)
+		return ""
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		return ""
 	}
 
-	var res LRCLibResponse
-	if err := json.Unmarshal(body, &res); err != nil {
-		return nil, err
+	var items []LRCLibItem
+	if err := json.Unmarshal(body, &items); err != nil {
+		return ""
 	}
 
-	if res.SyncedLyrics == "" {
-		return nil, fmt.Errorf("no synced lyrics found")
+	for _, item := range items {
+		if strings.TrimSpace(item.SyncedLyrics) != "" {
+			return item.SyncedLyrics
+		}
 	}
-
-	_ = os.WriteFile(lrcPath, []byte(res.SyncedLyrics), 0644)
-	return ParseLRCString(res.SyncedLyrics)
+	return ""
 }

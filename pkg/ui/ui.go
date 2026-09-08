@@ -131,6 +131,23 @@ func (m Model) preloadMetadata(tracks []string) {
 	}
 }
 
+type LyricsLoadedMsg struct {
+	FilePath string
+	Lyrics   []metadata.LyricLine
+	Err      error
+}
+
+func fetchLyricsCmd(meta *metadata.MetadataExtractor, path, title, artist string) tea.Cmd {
+	return func() tea.Msg {
+		lyrics, err := meta.DownloadLyricsLRCLIB(path, title, artist)
+		return LyricsLoadedMsg{
+			FilePath: path,
+			Lyrics:   lyrics,
+			Err:      err,
+		}
+	}
+}
+
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
@@ -141,13 +158,24 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case TickMsg:
 		if m.player.CurrentTrackPath() != "" && m.curMeta.FilePath != m.player.CurrentTrackPath() {
-			m.onTrackChanged(m.player.CurrentTrackPath())
+			cmd := m.onTrackChanged(m.player.CurrentTrackPath())
+			if cmd != nil {
+				cmds = append(cmds, cmd)
+			}
 		}
 		m.updateActiveLyric()
 		if time.Now().After(m.statusExpireAt) {
 			m.statusMessage = ""
 		}
 		cmds = append(cmds, tickCmd())
+
+	case LyricsLoadedMsg:
+		if msg.FilePath == m.curMeta.FilePath {
+			if msg.Err == nil && len(msg.Lyrics) > 0 {
+				m.lyrics = msg.Lyrics
+				m.activeLyric = -1
+			}
+		}
 
 	case tea.KeyMsg:
 		if m.activeModal != "none" {
@@ -164,6 +192,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.searchInput.Blur()
 				if len(m.tracks) > 0 && m.libraryIndex < len(m.tracks) {
 					m.player.Play(m.libraryIndex)
+					cmd := m.onTrackChanged(m.tracks[m.libraryIndex])
+					if cmd != nil {
+						cmds = append(cmds, cmd)
+					}
 				}
 			default:
 				var cmd tea.Cmd
@@ -191,13 +223,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "n":
 			m.player.Next()
 			if m.player.CurrentTrackPath() != "" {
-				m.onTrackChanged(m.player.CurrentTrackPath())
+				cmd := m.onTrackChanged(m.player.CurrentTrackPath())
+				if cmd != nil {
+					cmds = append(cmds, cmd)
+				}
 			}
 
 		case "p":
 			m.player.Previous()
 			if m.player.CurrentTrackPath() != "" {
-				m.onTrackChanged(m.player.CurrentTrackPath())
+				cmd := m.onTrackChanged(m.player.CurrentTrackPath())
+				if cmd != nil {
+					cmds = append(cmds, cmd)
+				}
 			}
 
 		case "right":
@@ -276,7 +314,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "enter":
 			if len(m.tracks) > 0 && m.libraryIndex < len(m.tracks) {
 				m.player.Play(m.libraryIndex)
-				m.onTrackChanged(m.tracks[m.libraryIndex])
+				cmd := m.onTrackChanged(m.tracks[m.libraryIndex])
+				if cmd != nil {
+					cmds = append(cmds, cmd)
+				}
 			}
 		}
 	}
@@ -302,9 +343,9 @@ func (m *Model) filterTracks() {
 	m.player.LoadPlaylist(m.tracks)
 }
 
-func (m *Model) onTrackChanged(path string) {
+func (m *Model) onTrackChanged(path string) tea.Cmd {
 	if path == "" {
-		return
+		return nil
 	}
 
 	m.curMeta = m.meta.GetMetadata(path)
@@ -313,19 +354,16 @@ func (m *Model) onTrackChanged(path string) {
 	lyrics, loaded := m.meta.LoadLyrics(path)
 	if loaded {
 		m.lyrics = lyrics
-	} else {
-		m.lyrics = nil
-		// Fetch lyrics asynchronously in background
-		title := m.curMeta.Title
-		artist := m.curMeta.Artist
-		go func() {
-			dlLyrics, err := m.meta.DownloadLyricsLRCLIB(path, title, artist)
-			if err == nil && len(dlLyrics) > 0 {
-				m.lyrics = dlLyrics
-			}
-		}()
+		m.activeLyric = -1
+		return nil
 	}
+
+	m.lyrics = nil
 	m.activeLyric = -1
+
+	title := m.curMeta.Title
+	artist := m.curMeta.Artist
+	return fetchLyricsCmd(m.meta, path, title, artist)
 }
 
 func (m *Model) updateActiveLyric() {
