@@ -8,12 +8,16 @@ Reproductor de musica TUI (Terminal User Interface) escrito en Go con Bubbletea,
 
 ### v1.0.0 (Version Actual - Migracion a Go)
 - Reescritura completa del nucleo en Go para mejor rendimiento, menor consumo de recursos e inicio instantaneo.
-- Interfaz de terminal responsiva dividida en 3 paneles:
-  - Panel Izquierdo: Biblioteca de audio y barra de busqueda en tiempo real.
-  - Panel Central: Informacion de la pista activa, barra de progreso, medidor de volumen, modos de reproduccion y cola de reproduccion proxima.
-  - Panel Derecho: Letras sincronizadas LRC con desplazamiento automatico y resaltado en tiempo real.
+- Interfaz de terminal responsiva dividida en 3 paneles balanceados:
+  - Panel Izquierdo (30%): Biblioteca de audio y barra de busqueda en tiempo real.
+  - Panel Central (33%): Informacion de la pista activa, renderizado de portada en terminal, barra de progreso minimalista, medidor de volumen, modos de reproduccion y cola de reproduccion proxima.
+  - Panel Derecho (37%): Letras sincronizadas LRC con desplazamiento automatico y resaltado en tiempo real.
+- Visualizacion de portada del album en terminal utilizando renderizado ANSI TrueColor de medios bloques (`▀`) con recorte automatico 1:1 para miniaturas 16:9 de YouTube.
+- Telemetria de audio en tiempo real (codec, bitrate en kbps, frecuencia de muestreo en kHz y canales).
+- Indicador visual de favoritos en la biblioteca, en el panel principal y en el modal de informacion de pista.
+- Barra de progreso minimalista compuesta por una linea fina y un cursor cuadrado deslizante (`■`).
 - Motor de reproduccion basado en socket IPC de mpv con soporte para formatos OPUS, FLAC, MP3, OGG, WAV, M4A, AAC y WV.
-- Descarga automatica de letras sincronizadas desde la API de LRCLIB si no se encuentra archivo LRC local.
+- Busqueda e integracion de letras sincronizadas con algoritmo de busqueda multi-etapa en la API de LRCLIB (exacta, titulo limpio + artista, titulo limpio).
 - Descargador interactivo de playlists en Go (`cmd/downloader`) utilizando `yt-dlp` con registro de descargas para evitar duplicados (`descargadas.txt`).
 - Sistema de base de datos local SQLite para persistencia de playlists, favoritos, historial de reproduccion y configuracion.
 - Selector de 12 temas de colores de acento.
@@ -27,11 +31,15 @@ Reproductor de musica TUI (Terminal User Interface) escrito en Go con Bubbletea,
 
 - Reproduccion de Audio: Control de reproduccion (play, pausa, detener, siguiente, anterior, avance y retroceso de 10 segundos, ajuste de volumen de 0% a 150%).
 - Modos de Reproduccion: Modo aleatorio (shuffle) y modos de repeticion (desactivado, repetir todo, repetir una pista).
+- Telemetria de Audio: Monitoreo en tiempo real de codec, bitrate, frecuencia de muestreo y numero de canales.
+- Portada en Terminal: Renderizado TrueColor ANSI en alta definicion con auto-crop 1:1 para eliminar bordes negros o laterales.
+- Barra de Progreso Minimalista: Linea fina con cursor cuadrado (`■`) que indica el avance exacto del audio.
+- Indicador de Favoritos: Marca visual en la lista de canciones y badge destacado en la pantalla principal.
 - Busqueda e Historial: Busqueda en tiempo real en la biblioteca, historial de pistas reproducidas y marcadores de favoritos.
 - Descarga de Playlists: Descargador interactivo en Go que solicita URL o ID de la playlist y evita volver a descargar archivos ya existentes.
 - Gestion de Playlists: Creacion y seleccion de listas de reproduccion personalizadas.
 - Visualizador de Letras: Sincronizacion de letras LRC por marcas de tiempo en segundos.
-- Informacion de Pista: Visualizacion de metadatos (Titulo, Artista, Album, Año, Ruta del archivo, Formato, Telemetria).
+- Informacion de Pista: Visualizacion de metadatos (Titulo, Artista, Album, Año, Ruta del archivo, Formato, Telemetria, Estado de Favorito).
 
 ---
 
@@ -111,8 +119,8 @@ ShellBeat/
 ├── musica/               # Carpeta de biblioteca de audio
 └── pkg/
     ├── db/               # Gestor de base de datos SQLite
-    ├── metadata/         # Extractor de etiquetas y letras LRC
-    ├── player/           # Controlador mpv via socket IPC
+    ├── metadata/         # Extractor de etiquetas, letras LRC y renderizador de portadas ANSI
+    ├── player/           # Controlador mpv via socket IPC y telemetria de audio
     ├── scanner/          # Escaner de directorio de audio
     └── ui/               # Interfaz TUI con Bubbletea y Lipgloss
 ```
