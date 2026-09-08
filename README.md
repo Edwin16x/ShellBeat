@@ -14,6 +14,7 @@ Reproductor de musica TUI (Terminal User Interface) escrito en Go con Bubbletea,
   - Panel Derecho: Letras sincronizadas LRC con desplazamiento automatico y resaltado en tiempo real.
 - Motor de reproduccion basado en socket IPC de mpv con soporte para formatos OPUS, FLAC, MP3, OGG, WAV, M4A, AAC y WV.
 - Descarga automatica de letras sincronizadas desde la API de LRCLIB si no se encuentra archivo LRC local.
+- Descargador interactivo de playlists en Go (`cmd/downloader`) utilizando `yt-dlp` con registro de descargas para evitar duplicados (`descargadas.txt`).
 - Sistema de base de datos local SQLite para persistencia de playlists, favoritos, historial de reproduccion y configuracion.
 - Selector de 12 temas de colores de acento.
 
@@ -27,9 +28,10 @@ Reproductor de musica TUI (Terminal User Interface) escrito en Go con Bubbletea,
 - Reproduccion de Audio: Control de reproduccion (play, pausa, detener, siguiente, anterior, avance y retroceso de 10 segundos, ajuste de volumen de 0% a 150%).
 - Modos de Reproduccion: Modo aleatorio (shuffle) y modos de repeticion (desactivado, repetir todo, repetir una pista).
 - Busqueda e Historial: Busqueda en tiempo real en la biblioteca, historial de pistas reproducidas y marcadores de favoritos.
+- Descarga de Playlists: Descargador interactivo en Go que solicita URL o ID de la playlist y evita volver a descargar archivos ya existentes.
 - Gestion de Playlists: Creacion y seleccion de listas de reproduccion personalizadas.
 - Visualizador de Letras: Sincronizacion de letras LRC por marcas de tiempo en segundos.
-- Informacion de Pista: Visualizacion de metadatos (Titulo, Artista, Album, Año, Ruta del archivo, Formato).
+- Informacion de Pista: Visualizacion de metadatos (Titulo, Artista, Album, Año, Ruta del archivo, Formato, Telemetria).
 
 ---
 
@@ -56,11 +58,27 @@ Reproductor de musica TUI (Terminal User Interface) escrito en Go con Bubbletea,
 
 ---
 
+## Descargador de Playlists (Go)
+
+ShellBeat incluye un descargador de playlists escrito en Go que utiliza `yt-dlp` para guardar el audio en formato **OPUS** de maxima calidad e incrustar la portada y metadatos:
+
+```bash
+# Compilar el descargador
+go build -o shellbeat-dl ./cmd/downloader
+
+# Ejecutar de forma interactiva
+./shellbeat-dl
+```
+
+El descargador solicitará la URL o ID de la playlist de YouTube Music (o usará la playlist por defecto al presionar Enter). Utiliza `musica/descargadas.txt` para comparar e ignorar pistas previamente descargadas.
+
+---
+
 ## Requisitos e Instalacion
 
 ### Requisitos del Sistema
 - Go 1.22 o superior
-- mpv instalado en el sistema
+- mpv e yt-dlp instalados en el sistema
 
 ### Compilacion y Ejecucion
 
@@ -69,13 +87,14 @@ Reproductor de musica TUI (Terminal User Interface) escrito en Go con Bubbletea,
 git clone https://github.com/Edwin16x/ShellBeat.git
 cd ShellBeat
 
-# 2. Compilar la aplicacion
+# 2. Compilar la aplicacion principal y el descargador
 go build -o shellbeat .
+go build -o shellbeat-dl ./cmd/downloader
 
-# 3. Crear directorio de musica y agregar archivos
-mkdir -p musica
+# 3. Descargar musica o colocarla en la carpeta musica/
+./shellbeat-dl
 
-# 4. Ejecutar
+# 4. Ejecutar el reproductor
 ./shellbeat
 ```
 
@@ -86,6 +105,8 @@ mkdir -p musica
 ```
 ShellBeat/
 ├── main.go               # Punto de entrada principal
+├── cmd/
+│   └── downloader/       # Descargador interactivo de playlists de YouTube Music en Go
 ├── go.mod / go.sum       # Modulo Go y dependencias
 ├── musica/               # Carpeta de biblioteca de audio
 └── pkg/

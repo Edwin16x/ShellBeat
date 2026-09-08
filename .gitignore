@@ -1,5 +1,6 @@
 # Binarios compilados
 shellbeat
+shellbeat-dl
 *.exe
 *.exe.manifest
 *.dll
