@@ -11,16 +11,58 @@ import (
 
 const DefaultPlaylistURL = "https://music.youtube.com/playlist?list=PL8UeZt7lYRzRfVTTYIlPfJEsr__m4fEmy"
 
+func findYtDlp() string {
+	// Check user local bin first (updated version)
+	home, err := os.UserHomeDir()
+	if err == nil {
+		userLocal := filepath.Join(home, ".local", "bin", "yt-dlp")
+		if _, err := os.Stat(userLocal); err == nil {
+			return userLocal
+		}
+	}
+
+	// Check system PATH
+	if path, err := exec.LookPath("yt-dlp"); err == nil {
+		return path
+	}
+
+	return ""
+}
+
+func getExtendedEnv() []string {
+	env := os.Environ()
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return env
+	}
+
+	// Include node & local bin in PATH if present
+	extraPaths := []string{
+		filepath.Join(home, ".local", "bin"),
+		filepath.Join(home, ".nvm", "versions", "node", "v22.20.0", "bin"),
+	}
+
+	var currentPath string
+	for i, e := range env {
+		if strings.HasPrefix(e, "PATH=") {
+			currentPath = strings.TrimPrefix(e, "PATH=")
+			newPath := strings.Join(extraPaths, ":") + ":" + currentPath
+			env[i] = "PATH=" + newPath
+			break
+		}
+	}
+	return env
+}
+
 func main() {
 	fmt.Println("==================================================")
 	fmt.Println("           ShellBeat Music Downloader             ")
 	fmt.Println("==================================================")
 
-	// Check if yt-dlp is installed
-	ytDlpPath, err := exec.LookPath("yt-dlp")
-	if err != nil {
+	ytDlpPath := findYtDlp()
+	if ytDlpPath == "" {
 		fmt.Println("Error: 'yt-dlp' no se encuentra instalado en el sistema.")
-		fmt.Println("Instálalo con: pip install yt-dlp  o  sudo apt install yt-dlp")
+		fmt.Println("Instálalo con: pip install --break-system-packages -U yt-dlp")
 		os.Exit(1)
 	}
 
@@ -58,10 +100,11 @@ func main() {
 	archiveFile := filepath.Join(outputFolder, "descargadas.txt")
 	outputTemplate := filepath.Join(outputFolder, "%(title)s [%(id)s].%(ext)s")
 
-	fmt.Printf("\n▶ Descargando playlist:\n  URL:    %s\n  Destino: %s/\n  Fichero de control: %s\n\n", playlistURL, outputFolder, archiveFile)
+	fmt.Printf("\n▶ Ejecutando yt-dlp (%s):\n  URL:                %s\n  Destino:            %s/\n  Control duplicados: %s\n\n",
+		ytDlpPath, playlistURL, outputFolder, archiveFile)
 
 	args := []string{
-		"--format", "bestaudio",
+		"--format", "bestaudio/best",
 		"--extract-audio",
 		"--audio-format", "opus",
 		"--audio-quality", "0",
@@ -78,12 +121,13 @@ func main() {
 	}
 
 	cmd := exec.Command(ytDlpPath, args...)
+	cmd.Env = getExtendedEnv()
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
 
 	if err := cmd.Run(); err != nil {
-		fmt.Printf("\nProceso finalizado con advertencias o interrupción: %v\n", err)
+		fmt.Printf("\nProceso de descarga finalizado: %v\n", err)
 	} else {
 		fmt.Println("\n✔ Descarga completada exitosamente.")
 	}
