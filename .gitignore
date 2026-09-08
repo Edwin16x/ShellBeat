@@ -1,11 +1,19 @@
-__pycache__/ 
-*.py[cod]
-.venv/
-venv/
-.DS_Store
+# Binarios compilados
+shellbeat
+*.exe
+*.exe.manifest
+*.dll
+*.so
+*.dylib
+
+# Carpetas de datos y entorno
 musica/*
 !musica/.gitkeep
-
 *.db
 descargadas.txt
 biblioteca.json
+
+# IDEs
+.idea/
+.vscode/
+.DS_Store
