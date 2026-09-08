@@ -663,18 +663,29 @@ func (m Model) renderPlayerView(width, height int, accent lipgloss.Color) string
 	if barWidth < 10 {
 		barWidth = 10
 	}
-	filledLen := int(pct * float64(barWidth))
-	if filledLen < 0 {
-		filledLen = 0
+
+	posIdx := int(pct * float64(barWidth-1))
+	if posIdx < 0 {
+		posIdx = 0
 	}
-	emptyLen := barWidth - filledLen
+	if posIdx >= barWidth {
+		posIdx = barWidth - 1
+	}
 
-	barFilled := strings.Repeat("█", filledLen)
-	barEmpty := strings.Repeat("░", emptyLen)
+	leftLen := posIdx
+	rightLen := barWidth - 1 - posIdx
+	if rightLen < 0 {
+		rightLen = 0
+	}
 
-	barStyle := lipgloss.NewStyle().Foreground(accent)
-	emptyStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#444444"))
-	progressBarStr := barStyle.Render(barFilled) + emptyStyle.Render(barEmpty)
+	leftLine := strings.Repeat("─", leftLen)
+	rightLine := strings.Repeat("─", rightLen)
+
+	lineStyle := lipgloss.NewStyle().Foreground(accent)
+	thumbStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FFFFFF"))
+	unfilledStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#444444"))
+
+	progressBarStr := lineStyle.Render(leftLine) + thumbStyle.Render("■") + unfilledStyle.Render(rightLine)
 
 	timeStr := fmt.Sprintf("%s / %s", formatSeconds(pos), formatSeconds(dur))
 	timeStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#888888")).PaddingLeft(2)
