@@ -31,6 +31,12 @@ type Player struct {
 	isPaused bool
 	stopped  bool
 
+	// Telemetry
+	audioCodec      string
+	audioBitrate    int
+	audioSampleRate int
+	audioChannels   int
+
 	OnTrackEnd func()
 	OnStatus   func()
 }
@@ -87,6 +93,10 @@ func (p *Player) observeProperties() {
 	_ = p.sendIPC("observe_property", 2, "duration")
 	_ = p.sendIPC("observe_property", 3, "pause")
 	_ = p.sendIPC("observe_property", 4, "eof-reached")
+	_ = p.sendIPC("observe_property", 5, "audio-codec-name")
+	_ = p.sendIPC("observe_property", 6, "audio-bitrate")
+	_ = p.sendIPC("observe_property", 7, "audio-params/samplerate")
+	_ = p.sendIPC("observe_property", 8, "audio-params/channel-count")
 }
 
 func (p *Player) sendIPC(cmd string, args ...interface{}) error {
@@ -151,6 +161,22 @@ func (p *Player) handlePropertyChange(name string, data interface{}) {
 			if p.OnTrackEnd != nil {
 				go p.OnTrackEnd()
 			}
+		}
+	case "audio-codec-name":
+		if val, ok := data.(string); ok {
+			p.audioCodec = val
+		}
+	case "audio-bitrate":
+		if val, ok := data.(float64); ok {
+			p.audioBitrate = int(val / 1000.0)
+		}
+	case "audio-params/samplerate":
+		if val, ok := data.(float64); ok {
+			p.audioSampleRate = int(val)
+		}
+	case "audio-params/channel-count":
+		if val, ok := data.(float64); ok {
+			p.audioChannels = int(val)
 		}
 	}
 
@@ -397,6 +423,51 @@ func (p *Player) GetUpcoming(count int) []int {
 		}
 	}
 
+	return result
+}
+
+// Telemetry getters
+func (p *Player) Telemetry() (codec string, bitrate int, sampleRate int, channels int) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.audioCodec, p.audioBitrate, p.audioSampleRate, p.audioChannels
+}
+
+func (p *Player) TelemetryString() string {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	parts := []string{}
+	if p.audioCodec != "" {
+		parts = append(parts, p.audioCodec)
+	}
+	if p.audioBitrate > 0 {
+		parts = append(parts, fmt.Sprintf("%d kbps", p.audioBitrate))
+	}
+	if p.audioSampleRate > 0 {
+		parts = append(parts, fmt.Sprintf("%.1f kHz", float64(p.audioSampleRate)/1000.0))
+	}
+	if p.audioChannels > 0 {
+		if p.audioChannels == 2 {
+			parts = append(parts, "stereo")
+		} else if p.audioChannels == 1 {
+			parts = append(parts, "mono")
+		} else {
+			parts = append(parts, fmt.Sprintf("%d ch", p.audioChannels))
+		}
+	}
+
+	if len(parts) == 0 {
+		return "—"
+	}
+
+	result := ""
+	for i, part := range parts {
+		if i > 0 {
+			result += " · "
+		}
+		result += part
+	}
 	return result
 }
 

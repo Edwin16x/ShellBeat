@@ -564,11 +564,13 @@ func (m Model) renderPlayerView(width, height int, accent lipgloss.Color) string
 	trackTitle := "Sin canción seleccionada"
 	artistAlbum := "—"
 	ext := "OPUS"
+	isFav := false
 
 	if m.curMeta.FilePath != "" {
 		trackTitle = m.curMeta.Title
 		artistAlbum = fmt.Sprintf("%s • %s", m.curMeta.Artist, m.curMeta.Album)
 		ext = strings.ToUpper(strings.TrimPrefix(filepath.Ext(m.curMeta.FilePath), "."))
+		isFav = m.db.IsFavorite(m.curMeta.FilePath)
 	}
 
 	titleStyle := lipgloss.NewStyle().
@@ -587,6 +589,26 @@ func (m Model) renderPlayerView(width, height int, accent lipgloss.Color) string
 		BorderForeground(accent).
 		Padding(0, 1).
 		MarginLeft(2)
+
+	favBadgeStyle := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("#EF4444")).
+		Border(lipgloss.NormalBorder()).
+		BorderForeground(lipgloss.Color("#EF4444")).
+		Padding(0, 1).
+		MarginLeft(1)
+
+	badges := badgeStyle.Render(ext)
+	if isFav {
+		badges += favBadgeStyle.Render("♥ FAVORITO")
+	}
+
+	// Audio Telemetry
+	telemetryStr := m.player.TelemetryString()
+	telemetryStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#888888")).
+		PaddingLeft(2).
+		MarginTop(0)
 
 	// Progress bar calculation
 	pos := m.player.Position()
@@ -654,9 +676,10 @@ func (m Model) renderPlayerView(width, height int, accent lipgloss.Color) string
 	content := lipgloss.JoinVertical(
 		lipgloss.Left,
 		header,
-		badgeStyle.Render(ext),
+		badges,
 		titleStyle.Render(trackTitle),
 		subtitleStyle.Render(artistAlbum),
+		telemetryStyle.Render("📊 "+telemetryStr),
 		lipgloss.NewStyle().PaddingLeft(2).MarginTop(1).Render(progressBarStr),
 		timeStyle.Render(timeStr),
 		modeStyle.Render(modeLine),
@@ -804,11 +827,20 @@ func (m Model) renderModalOverlay(baseView string, accent lipgloss.Color) string
 	case "info":
 		var lines []string
 		lines = append(lines, lipgloss.NewStyle().Bold(true).Foreground(accent).Render("Información de la Pista:"))
-		lines = append(lines, fmt.Sprintf("  Title:      %s", m.curMeta.Title))
-		lines = append(lines, fmt.Sprintf("  Artist:     %s", m.curMeta.Artist))
-		lines = append(lines, fmt.Sprintf("  Album:      %s", m.curMeta.Album))
-		lines = append(lines, fmt.Sprintf("  Year:       %s", m.curMeta.Year))
-		lines = append(lines, fmt.Sprintf("  FilePath:   %s", m.curMeta.FilePath))
+		lines = append(lines, fmt.Sprintf("  Título:      %s", m.curMeta.Title))
+		lines = append(lines, fmt.Sprintf("  Artista:     %s", m.curMeta.Artist))
+		lines = append(lines, fmt.Sprintf("  Álbum:       %s", m.curMeta.Album))
+		lines = append(lines, fmt.Sprintf("  Año:         %s", m.curMeta.Year))
+
+		favStatus := "♡ No"
+		if m.db.IsFavorite(m.curMeta.FilePath) {
+			favStatus = "♥ Sí (Favorito)"
+		}
+		lines = append(lines, fmt.Sprintf("  Favorito:    %s", favStatus))
+
+		telemetryStr := m.player.TelemetryString()
+		lines = append(lines, fmt.Sprintf("  Telemetría:  %s", telemetryStr))
+		lines = append(lines, fmt.Sprintf("  Ruta:        %s", m.curMeta.FilePath))
 		lines = append(lines, "\n[Enter / Esc] Cerrar")
 		dialogContent = strings.Join(lines, "\n")
 	}
