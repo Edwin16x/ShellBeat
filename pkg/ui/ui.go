@@ -485,13 +485,13 @@ func (m Model) View() string {
 		mainHeight = 10
 	}
 
-	sideWidth := m.width / 4
-	if sideWidth < 25 {
-		sideWidth = 25
+	sideWidth := m.width * 30 / 100
+	if sideWidth < 28 {
+		sideWidth = 28
 	}
-	lyricsWidth := m.width / 4
-	if lyricsWidth < 25 {
-		lyricsWidth = 25
+	lyricsWidth := m.width * 37 / 100
+	if lyricsWidth < 30 {
+		lyricsWidth = 30
 	}
 	playerWidth := m.width - sideWidth - lyricsWidth - 6
 	if playerWidth < 30 {
