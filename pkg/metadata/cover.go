@@ -14,7 +14,8 @@ import (
 )
 
 // RenderCoverArt renders the image at coverPath as ANSI TrueColor block art.
-// Width and height specify the output size in character cells.
+// It automatically crops non-square 16:9 images (like 1280x720 YouTube thumbnails)
+// to a clean 1:1 central square, eliminating side letterbox borders.
 func RenderCoverArt(coverPath string, width, height int) string {
 	if coverPath == "" {
 		return renderPlaceholder(width, height)
@@ -31,12 +32,26 @@ func RenderCoverArt(coverPath string, width, height int) string {
 		return renderPlaceholder(width, height)
 	}
 
+	// Auto-crop non-square images (like YouTube 1280x720 thumbnails) to central 1:1 square
+	srcBounds := img.Bounds()
+	srcW := srcBounds.Dx()
+	srcH := srcBounds.Dy()
+
+	cropBounds := srcBounds
+	if srcW > srcH {
+		offsetX := (srcW - srcH) / 2
+		cropBounds = image.Rect(srcBounds.Min.X+offsetX, srcBounds.Min.Y, srcBounds.Min.X+offsetX+srcH, srcBounds.Max.Y)
+	} else if srcH > srcW {
+		offsetY := (srcH - srcW) / 2
+		cropBounds = image.Rect(srcBounds.Min.X, srcBounds.Min.Y+offsetY, srcBounds.Max.X, srcBounds.Min.Y+offsetY+srcW)
+	}
+
 	// Calculate target pixel dimensions: height character cells = height*2 pixels
 	pixelWidth := width
 	pixelHeight := height * 2
 
 	dst := image.NewRGBA(image.Rect(0, 0, pixelWidth, pixelHeight))
-	draw.CatmullRom.Scale(dst, dst.Bounds(), img, img.Bounds(), draw.Over, nil)
+	draw.CatmullRom.Scale(dst, dst.Bounds(), img, cropBounds, draw.Over, nil)
 
 	var lines []string
 	for y := 0; y < pixelHeight; y += 2 {
