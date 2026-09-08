@@ -17,6 +17,7 @@ import (
 )
 
 var ColorPresets = map[string]string{
+	"Dinámico":  "dynamic",
 	"Morado":    "#7F77DD",
 	"Azul":      "#5B8DEF",
 	"Verde":     "#4ADE80",
@@ -32,7 +33,7 @@ var ColorPresets = map[string]string{
 }
 
 var ColorNames = []string{
-	"Morado", "Azul", "Verde", "Rojo", "Naranja", "Rosa",
+	"Dinámico", "Morado", "Azul", "Verde", "Rojo", "Naranja", "Rosa",
 	"Cyan", "Dorado", "Lavanda", "Esmeralda", "Coral", "Lima",
 }
 
@@ -83,7 +84,11 @@ func NewModel(dbConn *db.DB, plyr *player.Player, musicDir string) Model {
 	plInput.Placeholder = "Nombre de la playlist..."
 	plInput.CharLimit = 40
 
-	accent := dbConn.GetConfig("accent_color", "#7F77DD")
+	accentSetting := dbConn.GetConfig("accent_color", "#7F77DD")
+	accentColor := accentSetting
+	if accentSetting == "dynamic" {
+		accentColor = "#7F77DD"
+	}
 
 	m := Model{
 		db:           dbConn,
@@ -93,7 +98,7 @@ func NewModel(dbConn *db.DB, plyr *player.Player, musicDir string) Model {
 		musicFolder:  musicDir,
 		searchInput:  ti,
 		newPLInput:   plInput,
-		accentColor:  accent,
+		accentColor:  accentColor,
 		trackArtists: make(map[string]string),
 		activeModal:  "none",
 	}
@@ -351,6 +356,10 @@ func (m *Model) onTrackChanged(path string) tea.Cmd {
 	m.curMeta = m.meta.GetMetadata(path)
 	_ = m.db.AddHistory(path)
 
+	if m.db.GetConfig("accent_color", "#7F77DD") == "dynamic" {
+		m.accentColor = metadata.ExtractDominantColor(m.curMeta.CoverPath)
+	}
+
 	lyrics, loaded := m.meta.LoadLyrics(path)
 	if loaded {
 		m.lyrics = lyrics
@@ -408,10 +417,16 @@ func (m Model) updateModal(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			}
 		case "enter":
 			colorName := ColorNames[m.modalIndex]
-			m.accentColor = ColorPresets[colorName]
-			_ = m.db.SetConfig("accent_color", m.accentColor)
+			val := ColorPresets[colorName]
+			_ = m.db.SetConfig("accent_color", val)
+			if val == "dynamic" {
+				m.accentColor = metadata.ExtractDominantColor(m.curMeta.CoverPath)
+				m.setStatus("🎨 Tema dinámico activado (color de portada)")
+			} else {
+				m.accentColor = val
+				m.setStatus("🎨 Tema actualizado: " + colorName)
+			}
 			m.activeModal = "none"
-			m.setStatus("🎨 Tema actualizado: " + colorName)
 		}
 
 	case "playlist_create":
@@ -838,7 +853,12 @@ func (m Model) renderModalOverlay(baseView string, accent lipgloss.Color) string
 		lines = append(lines, lipgloss.NewStyle().Bold(true).Foreground(accent).Render("Seleccionar Color de Acento:"))
 		for i, name := range ColorNames {
 			colorHex := ColorPresets[name]
-			sample := lipgloss.NewStyle().Foreground(lipgloss.Color(colorHex)).Render("■■■ ")
+			sample := "■■■ "
+			if colorHex == "dynamic" {
+				sample = lipgloss.NewStyle().Foreground(accent).Render("❖  ")
+			} else {
+				sample = lipgloss.NewStyle().Foreground(lipgloss.Color(colorHex)).Render("■■■ ")
+			}
 			line := fmt.Sprintf("  %s %s", sample, name)
 			if i == m.modalIndex {
 				line = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FFFFFF")).Background(accent).Render("> " + name)
