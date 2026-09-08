@@ -722,10 +722,21 @@ func (m Model) renderPlayerView(width, height int, accent lipgloss.Color) string
 		queueContent = "  (cola vacía)"
 	}
 
+	// Render Cover Art
+	coverWidth := 20
+	coverHeight := 8
+	if width < 36 {
+		coverWidth = 14
+		coverHeight = 6
+	}
+	coverArtStr := metadata.RenderCoverArt(m.curMeta.CoverPath, coverWidth, coverHeight)
+	coverWidget := lipgloss.NewStyle().MarginLeft(2).MarginTop(1).Render(coverArtStr)
+
 	content := lipgloss.JoinVertical(
 		lipgloss.Left,
 		header,
 		badges,
+		coverWidget,
 		titleStyle.Render(trackTitle),
 		subtitleStyle.Render(artistAlbum),
 		telemetryStyle.Render("📊 "+telemetryStr),
