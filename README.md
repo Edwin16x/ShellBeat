@@ -226,17 +226,9 @@ ShellBeat almacena datos en `~/.shellbeat/shellbeat.db` con estas tablas:
 
 ---
 
-## 📝 Roadmap
+## Migración a GO
 
-- [ ] Barra de progreso interactiva (click para saltar)
-- [ ] Ecualizador visual (ASCII spectrum)
-- [ ] Soporte para múltiples carpetas de música
-- [ ] Importar/exportar playlists (JSON, M3U)
-- [ ] Estadísticas de reproducción (top artistas, canciones más escuchadas)
-- [ ] Integración con Last.fm / ListenBrainz (scrobbling)
-- [ ] Migración a `pyproject.toml` para instalación via `pip install -e .`
-- [ ] Soporte para temas custom (archivo de configuración TOML/YAML)
-- [ ] Visualización de portada mejorada (protocolo Sixel/Kitty con fallback)
+
 
 ---
 
