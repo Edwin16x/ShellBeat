@@ -209,6 +209,14 @@ func (p *Player) Play(index ...int) {
 	}
 
 	p.currentIndex = targetIndex
+	if p.shuffle && len(p.shuffleOrder) > 0 {
+		for i, sIdx := range p.shuffleOrder {
+			if sIdx == targetIndex {
+				p.shufflePos = i
+				break
+			}
+		}
+	}
 	trackPath := p.playlist[p.currentIndex]
 	p.isPaused = false
 	p.stopped = false
@@ -407,9 +415,17 @@ func (p *Player) GetUpcoming(count int) []int {
 		return result
 	}
 
-	if p.shuffle {
-		for i := p.shufflePos + 1; i < len(p.shuffleOrder) && len(result) < count; i++ {
-			result = append(result, p.shuffleOrder[i])
+	if p.shuffle && len(p.shuffleOrder) > 0 {
+		for i := 1; len(result) < count && i <= len(p.shuffleOrder); i++ {
+			sPos := p.shufflePos + i
+			if p.repeatMode == "all" {
+				sPos = sPos % len(p.shuffleOrder)
+			}
+			if sPos >= 0 && sPos < len(p.shuffleOrder) {
+				result = append(result, p.shuffleOrder[sPos])
+			} else {
+				break
+			}
 		}
 	} else {
 		for i := 1; i <= remaining; i++ {
@@ -451,11 +467,19 @@ func (p *Player) GetUpcomingTrackPaths(count int) []string {
 	}
 
 	// 2. Add upcoming shuffle or sequential tracks
-	if p.shuffle {
-		for i := p.shufflePos + 1; i < len(p.shuffleOrder) && len(result) < count; i++ {
-			idx := p.shuffleOrder[i]
-			if idx >= 0 && idx < len(p.playlist) {
-				result = append(result, p.playlist[idx])
+	if p.shuffle && len(p.shuffleOrder) > 0 {
+		for i := 1; len(result) < count && i <= len(p.shuffleOrder); i++ {
+			sPos := p.shufflePos + i
+			if p.repeatMode == "all" {
+				sPos = sPos % len(p.shuffleOrder)
+			}
+			if sPos >= 0 && sPos < len(p.shuffleOrder) {
+				idx := p.shuffleOrder[sPos]
+				if idx >= 0 && idx < len(p.playlist) {
+					result = append(result, p.playlist[idx])
+				}
+			} else {
+				break
 			}
 		}
 	} else {
