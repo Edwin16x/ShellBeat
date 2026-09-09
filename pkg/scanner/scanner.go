@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 )
 
 var AudioExtensions = map[string]bool{
@@ -47,6 +49,65 @@ func (s *Scanner) ScanFolder(folder string) ([]string, error) {
 		return nil, err
 	}
 
-	sort.Strings(tracks)
+	sort.Slice(tracks, func(i, j int) bool {
+		return naturalLess(tracks[i], tracks[j])
+	})
 	return tracks, nil
+}
+
+func naturalLess(s1, s2 string) bool {
+	i, j := 0, 0
+	len1, len2 := len(s1), len(s2)
+
+	for i < len1 && j < len2 {
+		r1, size1 := utf8.DecodeRuneInString(s1[i:])
+		r2, size2 := utf8.DecodeRuneInString(s2[j:])
+
+		isDigit1 := unicode.IsDigit(r1)
+		isDigit2 := unicode.IsDigit(r2)
+
+		if isDigit1 && isDigit2 {
+			start1 := i
+			for i < len1 {
+				r, sz := utf8.DecodeRuneInString(s1[i:])
+				if !unicode.IsDigit(r) {
+					break
+				}
+				i += sz
+			}
+			start2 := j
+			for j < len2 {
+				r, sz := utf8.DecodeRuneInString(s2[j:])
+				if !unicode.IsDigit(r) {
+					break
+				}
+				j += sz
+			}
+
+			d1 := strings.TrimLeft(s1[start1:i], "0")
+			d2 := strings.TrimLeft(s2[start2:j], "0")
+
+			if len(d1) != len(d2) {
+				return len(d1) < len(d2)
+			}
+			if d1 != d2 {
+				return d1 < d2
+			}
+			if (i - start1) != (j - start2) {
+				return (i - start1) < (j - start2)
+			}
+			continue
+		}
+
+		c1 := unicode.ToLower(r1)
+		c2 := unicode.ToLower(r2)
+		if c1 != c2 {
+			return c1 < c2
+		}
+
+		i += size1
+		j += size2
+	}
+
+	return len1 < len2
 }

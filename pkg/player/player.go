@@ -81,6 +81,10 @@ func NewPlayer() (*Player, error) {
 		currentIndex: -1,
 	}
 
+	p.OnTrackEnd = func() {
+		p.Next()
+	}
+
 	// Start reading IPC responses & observe properties
 	go p.listenIPC()
 	p.observeProperties()

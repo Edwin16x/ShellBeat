@@ -162,10 +162,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = msg.Height
 
 	case TickMsg:
-		if m.player.CurrentTrackPath() != "" && m.curMeta.FilePath != m.player.CurrentTrackPath() {
-			cmd := m.onTrackChanged(m.player.CurrentTrackPath())
+		curPath := m.player.CurrentTrackPath()
+		if curPath != "" && m.curMeta.FilePath != curPath {
+			cmd := m.onTrackChanged(curPath)
 			if cmd != nil {
 				cmds = append(cmds, cmd)
+			}
+			for i, tr := range m.tracks {
+				if tr == curPath {
+					m.libraryIndex = i
+					break
+				}
 			}
 		}
 		m.updateActiveLyric()
@@ -357,6 +364,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case "enter":
 			if len(m.tracks) > 0 && m.libraryIndex < len(m.tracks) {
+				m.player.LoadPlaylist(m.tracks)
 				m.player.Play(m.libraryIndex)
 				cmd := m.onTrackChanged(m.tracks[m.libraryIndex])
 				if cmd != nil {
