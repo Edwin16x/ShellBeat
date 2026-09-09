@@ -214,7 +214,7 @@ func (p *Player) Play(index ...int) {
 	p.stopped = false
 	p.mu.Unlock()
 
-	_ = p.sendIPC("loadfile", trackPath)
+	_ = p.sendIPC("loadfile", trackPath, "replace")
 	_ = p.sendIPC("set_property", "pause", false)
 }
 
