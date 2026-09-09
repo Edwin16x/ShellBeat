@@ -191,17 +191,46 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			switch msg.String() {
 			case "esc":
 				m.isSearching = false
+				m.searchInput.Reset()
 				m.searchInput.Blur()
+				m.tracks = m.allTracks
+				m.libraryIndex = 0
+
+			case "up":
+				if m.libraryIndex > 0 {
+					m.libraryIndex--
+				}
+
+			case "down":
+				if m.libraryIndex < len(m.tracks)-1 {
+					m.libraryIndex++
+				}
+
 			case "enter":
 				m.isSearching = false
 				m.searchInput.Blur()
 				if len(m.tracks) > 0 && m.libraryIndex < len(m.tracks) {
+					selectedTrack := m.tracks[m.libraryIndex]
+					m.tracks = m.allTracks
+					m.searchInput.Reset()
+
+					targetIdx := 0
+					for i, tr := range m.allTracks {
+						if tr == selectedTrack {
+							targetIdx = i
+							break
+						}
+					}
+					m.libraryIndex = targetIdx
+					m.player.LoadPlaylist(m.allTracks)
 					m.player.Play(m.libraryIndex)
-					cmd := m.onTrackChanged(m.tracks[m.libraryIndex])
+
+					cmd := m.onTrackChanged(selectedTrack)
 					if cmd != nil {
 						cmds = append(cmds, cmd)
 					}
 				}
+
 			default:
 				var cmd tea.Cmd
 				m.searchInput, cmd = m.searchInput.Update(msg)
@@ -338,14 +367,15 @@ func (m *Model) filterTracks() {
 		var filtered []string
 		for _, tr := range m.allTracks {
 			name := strings.ToLower(filepath.Base(tr))
-			if strings.Contains(name, query) {
+			clean := strings.ToLower(metadata.FormatCleanTitle(filepath.Base(tr)))
+			artist := strings.ToLower(m.trackArtists[tr])
+			if strings.Contains(name, query) || strings.Contains(clean, query) || strings.Contains(artist, query) {
 				filtered = append(filtered, tr)
 			}
 		}
 		m.tracks = filtered
 	}
 	m.libraryIndex = 0
-	m.player.LoadPlaylist(m.tracks)
 }
 
 func (m *Model) onTrackChanged(path string) tea.Cmd {
