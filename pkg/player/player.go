@@ -426,6 +426,53 @@ func (p *Player) GetUpcoming(count int) []int {
 	return result
 }
 
+func (p *Player) GetUpcomingTrackPaths(count int) []string {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	var result []string
+	if len(p.playlist) == 0 {
+		return result
+	}
+
+	// 1. Add manual queue tracks
+	for _, idx := range p.manualQueue {
+		if len(result) >= count {
+			break
+		}
+		if idx >= 0 && idx < len(p.playlist) {
+			result = append(result, p.playlist[idx])
+		}
+	}
+
+	remaining := count - len(result)
+	if remaining <= 0 {
+		return result
+	}
+
+	// 2. Add upcoming shuffle or sequential tracks
+	if p.shuffle {
+		for i := p.shufflePos + 1; i < len(p.shuffleOrder) && len(result) < count; i++ {
+			idx := p.shuffleOrder[i]
+			if idx >= 0 && idx < len(p.playlist) {
+				result = append(result, p.playlist[idx])
+			}
+		}
+	} else {
+		for i := 1; i <= remaining && len(result) < count; i++ {
+			idx := p.currentIndex + i
+			if p.repeatMode == "all" && len(p.playlist) > 0 {
+				idx = idx % len(p.playlist)
+			}
+			if idx >= 0 && idx < len(p.playlist) {
+				result = append(result, p.playlist[idx])
+			}
+		}
+	}
+
+	return result
+}
+
 // Telemetry getters
 func (p *Player) Telemetry() (codec string, bitrate int, sampleRate int, channels int) {
 	p.mu.Lock()

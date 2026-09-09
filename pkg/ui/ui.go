@@ -331,8 +331,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case "a":
 			if len(m.tracks) > 0 && m.libraryIndex < len(m.tracks) {
-				m.player.AddToQueue(m.libraryIndex)
-				m.setStatus("➕ Añadido a la cola")
+				targetTrack := m.tracks[m.libraryIndex]
+				targetIdx := -1
+				for i, tr := range m.allTracks {
+					if tr == targetTrack {
+						targetIdx = i
+						break
+					}
+				}
+				if targetIdx != -1 {
+					m.player.AddToQueue(targetIdx)
+					m.setStatus("➕ Añadido a la cola: " + metadata.FormatCleanTitle(filepath.Base(targetTrack)))
+				}
 			}
 
 		case "up":
@@ -754,13 +764,14 @@ func (m Model) renderPlayerView(width, height int, accent lipgloss.Color) string
 
 	// Queue preview
 	queueHeader := lipgloss.NewStyle().Bold(true).Foreground(accent).PaddingLeft(2).MarginTop(1).Render("Siguiente en la cola:")
-	upcomingIdxs := m.player.GetUpcoming(4)
+	upcomingPaths := m.player.GetUpcomingTrackPaths(4)
 	var queueLines []string
-	for i, idx := range upcomingIdxs {
-		if idx >= 0 && idx < len(m.tracks) {
-			tName := metadata.FormatCleanTitle(filepath.Base(m.tracks[idx]))
-			queueLines = append(queueLines, fmt.Sprintf("  %d. %s", i+1, tName))
+	for i, path := range upcomingPaths {
+		tName := metadata.FormatCleanTitle(filepath.Base(path))
+		if len(tName) > width-8 {
+			tName = tName[:width-10] + "..."
 		}
+		queueLines = append(queueLines, fmt.Sprintf("  %d. %s", i+1, tName))
 	}
 	queueContent := strings.Join(queueLines, "\n")
 	if queueContent == "" {
